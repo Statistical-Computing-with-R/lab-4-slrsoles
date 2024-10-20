@@ -1,9 +1,11 @@
 ---
 title: "Lab 4: Childcare Costs in California"
-author: "Your name here!"
+author: "Skylar Richards"
 format: html
 editor: source
 embed-resources: true
+code-fold: true
+
 ---
 
 ## The Data
@@ -17,40 +19,71 @@ The data come to us from [TidyTuesday](https://github.com/rfordatascience/tidytu
 
 ```{r}
 #| label: setup
-
+library(tidyverse)
+library(forcats)
+library(here)
 ```
 
 ```{r}
 #| label: load-data
-
+#| message: false
 childcare_costs <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-05-09/childcare_costs.csv')
 
 counties <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-05-09/counties.csv')
 ```
 
 **1. Briefly describe the dataset (~ 4 sentences). What information does it contain?**
-
+The childcare dataset contains demographic data about age, sex, and child status and their participation in labor market/unemployment. It also contains data about families including income, 
 ## California Childcare Costs
 
 Let's start by focusing only on California. 
 
 **2. Create a `ca_childcare` dataset of childcare costs in California, containing (1) county information and (2) all information from the `childcare_costs` dataset.** 
 *Hint: There are 58 counties in CA and 11 years in the dataset. Therefore, your new dataset should have 53 x 11 = 638 observations.*
-
+Documentation c/o https://www.rdocumentation.org/packages/tidyft/versions/0.9.20/topics/inner_join
 ```{r}
 #| label: ca-childcare-costs
-
+# filter by california -> connect data by country code between data sets
+ca_childcare <- counties |>
+  filter(state_name == "California")|>  # get only CA entries 
+  inner_join(childcare_costs, counties, by = "county_fips_code") # combine datasets via county code 
 ```
 
 **3. Using a function from the `forcats` package, complete the code below to create a new variable where each county is categorized into one of the [10 Census regions](https://census.ca.gov/regions/) in California. Use the Region description (from the plot), not the Region number.**  
 *Hint: This is probably a good place to use ChatGPT to reduce on tedious work. But you do need to know how to prompt ChatGPT to make it useful!*
-
+Documentation c/o https://www.rdocumentation.org/packages/forcats/versions/1.0.0/topics/fct_collapse
 ```{r}
 #| label: recoding-county-to-census-regions
-
+# create new variable -> categorize county to region 
 ca_childcare <- ca_childcare |> 
-  mutate(county_name = str_remove(county_name, " County")) |>
-  ...
+  mutate(county_name = str_remove(county_name, " County")) |> # removes county and blank space before
+  mutate(region = fct_collapse(county_name,
+                               "Superior California" = c("Butte", "Colusa", "El Dorado",
+                                                         "Glenn", "Lassen", "Modoc",
+                                                         "Nevada", "Placer", "Plumas",
+                                                         "Sacramento", "Shasta", "Sierra",
+                                                         "Siskiyou", "Sutter", "Tehama",
+                                                         "Yolo", "Yuba"),
+                               "North Coast" = c("Del Norte", "Humboldt", "Lake",
+                                                 "Mendocino", "Napa", "Sonoma",
+                                                 "Trinity"),
+                               "San Francisco Bay Area" = c("Alameda", "Contra Costa", "Marin",
+                                                            "San Francisco", "San Mateo",
+                                                            "Santa Clara", "Solano"),
+                               "Northern San Joaquin Valley" = c("Alpine", "Amador", "Calaveras",
+                                                                 "Madera", "Mariposa", "Merced",
+                                                                 "Mono", "San Joaquin", "Stanislaus",
+                                                                 "Tuolumne"),
+                               "Central Coast" = c("Monterey", "San Benito", "San Luis Obispo",
+                                                   "Santa Barbara", "Santa Cruz", "Ventura"),
+                               "Southern San Joaquin Valley" = c("Fresno", "Inyo", "Kern",
+                                                                 "Kings", "Tulare"),
+                               "Inland Empire" = c("Riverside", "San Bernardino"),
+                               "Los Angeles County" = c("Los Angeles"),
+                               "Orange County" = c("Orange"),
+                               "San Diego - Imperial" = c("Imperial", "San Diego")
+                               ))
+  
 ```
 
 
@@ -58,7 +91,14 @@ ca_childcare <- ca_childcare |>
 
 ```{r}
 #| label: median-income-by-region-over-time
-
+california_2018_2008 <-ca_childcare|>
+  filter(study_year %in% c(2008,2018)) |> # filter for only 2 years of interest
+  group_by(study_year, region) |> # group study year to region 
+  summarize(median_region = median(mhi_2018), .groups = "drop")|>
+  pivot_wider(names_from = study_year, values_from = median_region)
+  
+print(california_2018_2008)
+    
 ```
 
 
@@ -67,6 +107,8 @@ ca_childcare <- ca_childcare |>
 
 ```{r}
 #| label: lowest-median-weekly-price-2018
+# sort by 2018 only -> find median of median fully time weekly price for infants -> check against income in 2018 
+
 
 ```
 
